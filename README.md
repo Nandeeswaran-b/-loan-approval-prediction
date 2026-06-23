@@ -1,5 +1,7 @@
 # Loan Approval Prediction Streamlit Web Application
 
+🚀 **Live Demo:** [https://loan-approval-prediction.onrender.com](https://loan-approval-prediction.onrender.com)
+
 This repository contains a complete, production-ready Machine Learning project that predicts loan eligibility using a customer application profile. It includes a comprehensive model training pipeline and a web application built using **Streamlit**, designed for easy local execution and automated cloud deployment on **Render.com**.
 
 ---
