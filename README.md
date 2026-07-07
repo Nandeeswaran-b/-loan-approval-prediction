@@ -2,7 +2,7 @@
 
 🚀 **Live Demo:** [https://loan-approval-prediction.onrender.com](https://loan-approval-prediction.onrender.com)
 
-This repository contains a complete, production-ready Machine Learning project that predicts loan eligibility using a customer application profile. It includes a comprehensive model training pipeline and a web application built using **Streamlit**, designed for easy local execution and automated cloud deployment on **Render.com**.
+This repository contains an enhanced, production-ready Machine Learning project that predicts loan eligibility using customer application profiles. It features advanced **domain feature engineering**, an optimized **Random Forest classifier** pipeline, an interactive **What-If Loan Optimizer simulator**, and a bulk **Batch Prediction Explorer** for bulk processing and CSV export.
 
 ---
 
@@ -10,11 +10,12 @@ This repository contains a complete, production-ready Machine Learning project t
 
 ```text
 loan-approval-prediction/
+├── .gitignore                 # Prevents committing local virtual env & cache files
 ├── dataset/
 │   └── loan_data.csv          # Raw customer application dataset
-├── app.py                     # Streamlit web application dashboard
-├── train_model.py             # ML pipeline (Data download, Preprocessing, Comparison, Tuning, Saving)
-├── loan_model.pkl             # Serialized Scikit-Learn pipeline (Preprocessors + Tuned Classifier)
+├── app.py                     # Streamlit web application dashboard (Predictor, Explorer, Batch Processor)
+├── train_model.py             # ML pipeline (Data download, Feature engineering, Tuning, Serialization)
+├── loan_model.pkl             # Serialized Scikit-Learn pipeline (Preprocessors + Tuned Random Forest Classifier)
 ├── model_metadata.json        # Saved performance scores and feature importances
 ├── requirements.txt           # Python library dependencies
 ├── render.yaml                # Render Blueprint configuration for cloud deployment
@@ -23,38 +24,49 @@ loan-approval-prediction/
 
 ---
 
-## 📊 Dataset Description
+## 📊 Dataset & Advanced Feature Engineering
 
-The dataset represents loan applications for **Dream Housing Finance**. It includes demographic, financial, and credit history variables for each applicant:
+The baseline dataset represents historical loan applications for **Dream Housing Finance**. In Phase 2, we engineered the following custom financial risk indicators:
 
-1.  **Gender:** Male / Female
-2.  **Married:** Yes / No
-3.  **Dependents:** 0, 1, 2, 3+
-4.  **Education:** Graduate / Not Graduate
-5.  **Self_Employed:** Yes / No
-6.  **ApplicantIncome:** Primary applicant monthly income ($)
-7.  **CoapplicantIncome:** Co-applicant monthly income ($)
-8.  **LoanAmount:** Requested loan amount in thousands ($)
-9.  **Loan_Amount_Term:** Term of the loan in months (e.g., 360 months = 30 years)
-10. **Credit_History:** Credit history meets guidelines (1.0 = Good/Cleared, 0.0 = Poor/Outstanding)
-11. **Property_Area:** Urban / Semiurban / Rural
-12. **Loan_Status (Target Variable):** Y (Approved) / N (Rejected)
+1.  **Total_Income:** Combined monthly income of the primary applicant and the co-applicant.
+2.  **Income_to_Loan_Ratio:** The monthly income relative to the requested loan amount.
+3.  **EMI (Estimated Monthly Installment):** Calculated at a standard 6% interest rate (0.5% monthly APR) over the selected loan term.
+4.  **DTI (Debt-to-Income Ratio):** The percentage of combined monthly income represented by the estimated EMI payment.
 
 ---
 
-## 📈 Model Comparison & Pipeline
+## 📈 Model Performance & Selection
 
-The pipeline compares four different classifiers using an 80-20 train-test split:
+The pipeline trains and compares four classifiers using an 80-20 train-test split:
 1.  **Logistic Regression**
 2.  **Decision Tree**
-3.  **Random Forest**
+3.  **Random Forest** (Selected & Tuned)
 4.  **XGBoost**
 
-### Data Preprocessing
--   **Missing Values:** Numeric columns are imputed with the **median**; categorical columns are imputed with the **mode** (most frequent value).
--   **Feature Scaling:** Numeric inputs are scaled using `StandardScaler` to ensure equal feature weight.
--   **Categorical Encoding:** Text categories are encoded into binary fields using `OneHotEncoder`.
--   All preprocessing steps and the model are combined into a single, cohesive Scikit-Learn **Pipeline** object, ensuring zero data leakage and making serialization seamless.
+With our advanced engineered features, the tuned **Random Forest Classifier** achieved the highest F1-Score:
+*   **Accuracy:** 86.99%
+*   **Precision:** 84.85%
+*   **Recall:** 98.82%
+*   **F1-Score:** 91.30%
+
+---
+
+## 💡 Custom Dashboard Features
+
+The Streamlit web application dashboard includes three main explorers:
+
+### 1. 🔮 Loan Eligibility Predictor
+Input individual applicant profiles (gender, marital status, income, loan amount, credit standing, etc.) to get an instant prediction.
+*   **What-If Loan Optimizer:** If an application is rejected, the simulator runs background scenarios to recommend actionable adjustments (e.g., specific reductions in loan amount, required co-applicant income, or extending terms) to reverse the model's decision and obtain approval.
+
+### 2. 📊 Interactive Data Explorer
+View the raw training dataset, explore statistical summary metrics, and dynamically plot attributes (e.g. ApplicantIncome, LoanAmount, Property_Area distributions) to discover trends.
+
+### 3. 📤 Batch Prediction Explorer
+Upload a CSV file containing multiple applicant records to process bulk data.
+*   **Template Downloader:** Download a sample template CSV to construct bulk records.
+*   **Bulk Analytics:** Shows aggregate KPIs (Total Applicants, Approval Count, Rejection Count, Approval Rate).
+*   **Export Report:** Download a complete bulk prediction report containing predictions and confidence levels for all applications.
 
 ---
 
@@ -64,17 +76,16 @@ The pipeline compares four different classifiers using an 80-20 train-test split
 Make sure Python (version 3.8 or higher) is installed on your computer.
 
 ### 1. Clone the Directory & Install Dependencies
-Navigate to the project folder in your command prompt/terminal and install the dependencies:
+Navigate to the project folder in your command prompt/terminal and install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 2. Train the Model (Optional)
-Run the training script to fetch the dataset, train/compare models, and create `loan_model.pkl` and `model_metadata.json`:
+Run the training script to retrain the pipeline and update `loan_model.pkl` and `model_metadata.json`:
 ```bash
 python train_model.py
 ```
-*Note: If you skip this, you can also train the model directly from the Streamlit web interface using the "Train Model Now" button.*
 
 ### 3. Launch the Streamlit Web Application
 Run the Streamlit server locally:
@@ -87,8 +98,6 @@ This will automatically open the application in your default web browser at `htt
 
 ## 🚀 How to Deploy on Render
 
-Render.com is a cloud hosting provider that makes deploying Python web services simple. We have included a `render.yaml` configuration to allow automated, one-click deployments.
-
 ### Option A: Using the Render Blueprint (`render.yaml`)
 1. Push this project folder to your GitHub repository.
 2. Log in to [Render.com](https://render.com/).
@@ -97,7 +106,6 @@ Render.com is a cloud hosting provider that makes deploying Python web services 
 5. Render will automatically detect the `render.yaml` file, provision a Python Web Service, install dependencies, train the model, and run the Streamlit app!
 
 ### Option B: Manual Setup on Render Dashboard
-If you prefer configuring the web service manually:
 1. Create a **New Web Service** on Render and link it to your GitHub repository.
 2. Configure these settings:
    - **Environment:** `Python`
