@@ -15,46 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for styling the UI
-st.markdown("""
-<style>
-    .main {
-        background-color: #f7f9fc;
-    }
-    .stButton>button {
-        background-color: #2e7d32;
-        color: white;
-        font-weight: bold;
-        width: 100%;
-        border-radius: 8px;
-        padding: 10px;
-        border: none;
-        transition: background-color 0.3s ease;
-    }
-    .stButton>button:hover {
-        background-color: #1b5e20;
-    }
-    .metric-card {
-        background-color: white;
-        padding: 15px;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        border-left: 5px solid #1565c0;
-        margin-bottom: 10px;
-    }
-    .title-text {
-        color: #1e3d59;
-        font-weight: 800;
-        margin-bottom: 2px;
-    }
-    .subtitle-text {
-        color: #17b978;
-        font-size: 18px;
-        font-weight: 500;
-        margin-bottom: 25px;
-    }
-</style>
-""", unsafe_allow_html=True)
+# No custom CSS (restored to normal Streamlit layout)
 
 # Helper function to check if model files exist
 def check_model_files():
@@ -69,9 +30,82 @@ def load_model_and_metadata():
         metadata = json.load(f)
     return model, metadata
 
+def get_loan_recommendations(model, input_df):
+    recommendations = []
+    import train_model
+    
+    # 1. Try reducing LoanAmount
+    current_amt = input_df["LoanAmount"].iloc[0]
+    for reduce_pct in [0.90, 0.80, 0.70, 0.60, 0.50]:
+        sim_df = input_df.copy()
+        new_amt = round(current_amt * reduce_pct)
+        if new_amt < 10:
+            break
+        sim_df["LoanAmount"] = float(new_amt)
+        sim_df = train_model.add_engineered_features(sim_df)
+        pred = model.predict(sim_df)[0]
+        prob = model.predict_proba(sim_df)[0][1]
+        if pred == 1:
+            recommendations.append({
+                "type": "Reduce Loan Amount",
+                "message": f"Apply for a lower loan amount of **${new_amt:,}k** (instead of ${current_amt:.0f}k).",
+                "confidence": prob * 100
+            })
+            break
+            
+    # 2. Try increasing Total Income (ApplicantIncome)
+    current_inc = input_df["ApplicantIncome"].iloc[0]
+    for increase_pct in [0.10, 0.20, 0.30, 0.40, 0.50, 0.75, 1.00]:
+        sim_df = input_df.copy()
+        add_inc = current_inc * increase_pct
+        sim_df["ApplicantIncome"] = current_inc + add_inc
+        sim_df = train_model.add_engineered_features(sim_df)
+        pred = model.predict(sim_df)[0]
+        prob = model.predict_proba(sim_df)[0][1]
+        if pred == 1:
+            recommendations.append({
+                "type": "Increase Income",
+                "message": f"Increase combined income by **${round(add_inc):,}** (e.g., via co-applicant or salary raise).",
+                "confidence": prob * 100
+            })
+            break
+            
+    # 3. Try changing the Loan Term
+    current_term = input_df["Loan_Amount_Term"].iloc[0]
+    terms_to_try = [360, 480] if current_term < 360 else []
+    for term in terms_to_try:
+        sim_df = input_df.copy()
+        sim_df["Loan_Amount_Term"] = float(term)
+        sim_df = train_model.add_engineered_features(sim_df)
+        pred = model.predict(sim_df)[0]
+        prob = model.predict_proba(sim_df)[0][1]
+        if pred == 1:
+            recommendations.append({
+                "type": "Extend Term",
+                "message": f"Extend the loan term to **{term} months** (reduces monthly EMI pressure).",
+                "confidence": prob * 100
+            })
+            break
+            
+    # 4. What if they improve credit history?
+    if str(input_df["Credit_History"].iloc[0]) in ["0.0", "0"]:
+        sim_df = input_df.copy()
+        sim_df["Credit_History"] = "1.0"
+        sim_df = train_model.add_engineered_features(sim_df)
+        pred = model.predict(sim_df)[0]
+        prob = model.predict_proba(sim_df)[0][1]
+        if pred == 1:
+            recommendations.append({
+                "type": "Credit Standing",
+                "message": "Establish a **Good Credit History** (resolving past defaults is the strongest approval driver).",
+                "confidence": prob * 100
+            })
+            
+    return recommendations
+
 # App Title & Layout
-st.markdown("<h1 class='title-text'>🏦 Dream Housing Finance</h1>", unsafe_allow_html=True)
-st.markdown("<p class='subtitle-text'>Automated Loan Eligibility Prediction System</p>", unsafe_allow_html=True)
+st.title("🏦 Dream Housing Finance")
+st.write("Automated Loan Eligibility Prediction System")
 
 # ----------------- MODEL LOADER & TRAINER -----------------
 model_loaded = False
@@ -97,7 +131,7 @@ else:
                 st.error(f"Error during training: {e}")
 
 # ----------------- TABBED LAYOUT -----------------
-tab_predict, tab_explore = st.tabs(["🔮 Loan Eligibility Predictor", "📊 Interactive Data Explorer"])
+tab_predict, tab_explore, tab_batch = st.tabs(["🔮 Loan Eligibility Predictor", "📊 Interactive Data Explorer", "📤 Batch Prediction Explorer"])
 
 # ==================== TAB 1: PREDICTOR ====================
 with tab_predict:
@@ -184,6 +218,10 @@ with tab_predict:
                 # Format features
                 input_df['Credit_History'] = input_df['Credit_History'].astype(object)
                 
+                # Apply feature engineering
+                import train_model
+                input_df = train_model.add_engineered_features(input_df)
+                
                 # Predict
                 try:
                     prediction = model.predict(input_df)[0]
@@ -199,6 +237,15 @@ with tab_predict:
                     else:
                         st.error(f"❌ **LOAN REJECTED**")
                         st.warning(f"The model is **{confidence*100:.2f}%** confident that the applicant does NOT meet eligibility criteria.")
+                        
+                        # What-If recommendations simulator
+                        recs = get_loan_recommendations(model, input_df)
+                        if recs:
+                            st.write("")
+                            st.markdown("💡 **Path to Approval Recommendations:**")
+                            st.write("The model simulated adjustments to find how this application could be approved:")
+                            for r in recs:
+                                st.info(f"👉 **{r['type']}**: {r['message']} *(Simulated approval confidence: {r['confidence']:.1f}%)*")
                         
                     # 2. Risk Metrics & Analysis Output
                     st.markdown("#### 🔍 Financial Health & Risk Analysis")
@@ -259,14 +306,10 @@ Risk Designation: {'HIGH DEBT-TO-INCOME RISK' if dti > 40 else 'LOW/MODERATE DEB
         
         if model_loaded:
             metrics = metadata["metrics"]
-            st.markdown(f"""
-            <div class="metric-card">
-                <h4>🏆 Selected Model: Tuned {metadata['best_model_name']}</h4>
-                <p>Accuracy: <b>{metrics['Accuracy']*100:.1f}%</b></p>
-                <p>F1-Score: <b>{metrics['F1_Score']*100:.1f}%</b></p>
-                <p>Recall: <b>{metrics['Recall']*100:.1f}%</b></p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.write(f"🏆 **Selected Model: Tuned {metadata['best_model_name']}**")
+            st.metric("Accuracy", f"{metrics['Accuracy']*100:.1f}%")
+            st.metric("F1-Score", f"{metrics['F1_Score']*100:.1f}%")
+            st.metric("Recall", f"{metrics['Recall']*100:.1f}%")
             
             st.write("🔍 **Key Features Driving Approvals**")
             feature_importances = metadata["feature_importances"]
@@ -367,3 +410,116 @@ with tab_explore:
             
         plt.tight_layout()
         st.pyplot(fig_dist)
+
+# ==================== TAB 3: BATCH PREDICTION ====================
+with tab_batch:
+    st.subheader("📤 Bulk Loan Application Processor")
+    st.write("Upload a CSV file containing multiple applicant records to run batch predictions and export results.")
+
+    # 1. Provide template downloader
+    st.markdown("### 📋 Instructions & Template")
+    st.write("Your uploaded CSV must contain the following columns exactly:")
+    cols_expected = [
+        "Gender", "Married", "Dependents", "Education", "Self_Employed", 
+        "ApplicantIncome", "CoapplicantIncome", "LoanAmount", "Loan_Amount_Term", 
+        "Credit_History", "Property_Area"
+    ]
+    st.code(",".join(cols_expected))
+    
+    # Create template DataFrame
+    template_df = pd.DataFrame([{
+        "Gender": "Male",
+        "Married": "Yes",
+        "Dependents": "0",
+        "Education": "Graduate",
+        "Self_Employed": "No",
+        "ApplicantIncome": 5000.0,
+        "CoapplicantIncome": 1500.0,
+        "LoanAmount": 150.0,
+        "Loan_Amount_Term": 360.0,
+        "Credit_History": "1.0",
+        "Property_Area": "Semiurban"
+    }])
+    
+    template_csv = template_df.to_csv(index=False)
+    st.download_button(
+        label="📥 Download Template CSV",
+        data=template_csv,
+        file_name="loan_batch_template.csv",
+        mime="text/csv"
+    )
+    
+    st.markdown("---")
+    
+    # 2. File uploader
+    uploaded_file = st.file_uploader("Upload CSV File", type=["csv"])
+    
+    if uploaded_file is not None:
+        try:
+            input_data = pd.read_csv(uploaded_file)
+            
+            # Check for missing columns
+            missing_cols = [c for c in cols_expected if c not in input_data.columns]
+            if missing_cols:
+                st.error(f"❌ **Invalid CSV Format:** Missing required columns: {', '.join(missing_cols)}")
+            elif not model_loaded:
+                st.error("❌ Machine Learning model is not loaded. Please train the model first.")
+            else:
+                st.success("✅ CSV file uploaded and validated successfully!")
+                
+                # Make a copy for processing
+                processed_data = input_data.copy()
+                
+                # Format Credit_History column to string object
+                if "Credit_History" in processed_data.columns:
+                    processed_data["Credit_History"] = processed_data["Credit_History"].astype(str).str.strip().replace({
+                        "1": "1.0", "0": "0.0", "1.0": "1.0", "0.0": "0.0", "1.0\r": "1.0", "0.0\r": "0.0"
+                    }).astype(object)
+                
+                # Apply engineered features
+                import train_model
+                processed_data = train_model.add_engineered_features(processed_data)
+                
+                # Predict bulk records
+                predictions = model.predict(processed_data)
+                probabilities = model.predict_proba(processed_data)
+                
+                # Map outputs back to input data (so user sees their original fields + predictions)
+                output_df = input_data.copy()
+                output_df["Prediction_Status"] = ["Approved" if p == 1 else "Rejected" for p in predictions]
+                output_df["Confidence_Level"] = [
+                    f"{probs[1]*100:.1f}%" if pred == 1 else f"{probs[0]*100:.1f}%"
+                    for pred, probs in zip(predictions, probabilities)
+                ]
+                
+                # KPI Summary Stats
+                total_cases = len(predictions)
+                approved_cases = sum(predictions)
+                rejected_cases = total_cases - approved_cases
+                approval_pct = (approved_cases / total_cases) * 100 if total_cases > 0 else 0.0
+                
+                st.markdown("#### 📊 Batch Summary Statistics")
+                k1, k2, k3, k4 = st.columns(4)
+                with k1:
+                    st.metric("Total Applicants", f"{total_cases}")
+                with k2:
+                    st.metric("Approved Apps", f"{approved_cases}")
+                with k3:
+                    st.metric("Rejected Apps", f"{rejected_cases}")
+                with k4:
+                    st.metric("Approval Rate", f"{approval_pct:.1f}%")
+                    
+                st.markdown("#### 🔍 Prediction Results")
+                st.dataframe(output_df, use_container_width=True)
+                
+                # Downloadable bulk report
+                result_csv = output_df.to_csv(index=False)
+                st.download_button(
+                    label="📥 Download Prediction Results Report",
+                    data=result_csv,
+                    file_name="loan_predictions_results.csv",
+                    mime="text/csv"
+                )
+                
+        except Exception as e:
+            st.error(f"Error parsing file: {e}")

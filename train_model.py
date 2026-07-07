@@ -41,6 +41,26 @@ def download_dataset():
         
     return file_path
 
+def add_engineered_features(df):
+    df = df.copy()
+    # 1. Total Income
+    df['Total_Income'] = df['ApplicantIncome'] + df['CoapplicantIncome'].fillna(0.0)
+    
+    # 2. Income to Loan Ratio
+    df['Income_to_Loan_Ratio'] = df['Total_Income'] / (df['LoanAmount'] + 1e-5)
+    
+    # 3. Estimated Monthly Installment (EMI)
+    # 6% APR -> 0.5% monthly rate (0.005)
+    r = 0.005
+    term = df['Loan_Amount_Term'].apply(lambda x: x if x > 0 else np.nan)
+    pow_r = (1 + r) ** term
+    df['EMI'] = (df['LoanAmount'] * 1000) * r * pow_r / (pow_r - 1)
+    
+    # 4. Debt to Income Ratio (DTI)
+    df['DTI'] = (df['EMI'] / (df['Total_Income'] + 1e-5)) * 100
+    
+    return df
+
 def train_and_save_model():
     # 1. Download and load data
     file_path = download_dataset()
@@ -56,6 +76,9 @@ def train_and_save_model():
         
     # Treat Credit_History as object type (categorical indicator)
     df['Credit_History'] = df['Credit_History'].astype(object)
+    
+    # Apply feature engineering
+    df = add_engineered_features(df)
     
     # 2. Separate features (X) and target (y)
     X = df.drop(columns=["Loan_Status"])
@@ -76,7 +99,10 @@ def train_and_save_model():
     )
     
     # 4. Pipelines
-    numeric_features = ["ApplicantIncome", "CoapplicantIncome", "LoanAmount", "Loan_Amount_Term"]
+    numeric_features = [
+        "ApplicantIncome", "CoapplicantIncome", "LoanAmount", "Loan_Amount_Term",
+        "Total_Income", "Income_to_Loan_Ratio", "EMI", "DTI"
+    ]
     categorical_features = ["Gender", "Married", "Dependents", "Education", "Self_Employed", "Credit_History", "Property_Area"]
     
     numeric_transformer = Pipeline(steps=[

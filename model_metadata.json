@@ -1,58 +1,62 @@
 {
-    "best_model_name": "Logistic Regression",
+    "best_model_name": "Random Forest",
     "metrics": {
-        "Accuracy": 0.8617886178861789,
-        "Precision": 0.84,
+        "Accuracy": 0.8699186991869918,
+        "Precision": 0.8484848484848485,
         "Recall": 0.9882352941176471,
-        "F1_Score": 0.9081081081081082
+        "F1_Score": 0.9130434782608695
     },
     "feature_importances": {
-        "Credit_History_0.0": 0.25618978544057236,
-        "Credit_History_1.0": 0.25611240546160713,
-        "Property_Area_Semiurban": 0.07628641189281858,
-        "Property_Area_Rural": 0.05208217025654405,
-        "Married_No": 0.04366801205396485,
-        "Married_Yes": 0.043590632074999955,
-        "Dependents_1": 0.041385248918876225,
-        "Dependents_2": 0.040373529298005494,
-        "Education_Not Graduate": 0.03430558055639633,
-        "Education_Graduate": 0.03422820057743143,
-        "CoapplicantIncome": 0.027761923249082,
-        "Property_Area_Urban": 0.02428162161523941,
-        "Self_Employed_Yes": 0.012617342332202394,
-        "Self_Employed_No": 0.012539962353237491,
-        "Gender_Male": 0.011220985927793364,
-        "Gender_Female": 0.011143605948828393,
-        "Dependents_3+": 0.007650043202741848,
-        "Dependents_0": 0.0067157035608359185,
-        "ApplicantIncome": 0.003855478579046859,
-        "LoanAmount": 0.0033970671284298697,
-        "Loan_Amount_Term": 0.0005942895713459908
+        "Credit_History_1.0": 0.30089104558168694,
+        "Credit_History_0.0": 0.23178994808252248,
+        "Total_Income": 0.1014945976804684,
+        "Income_to_Loan_Ratio": 0.05846329139021832,
+        "ApplicantIncome": 0.052121488143154655,
+        "DTI": 0.051100882774108035,
+        "LoanAmount": 0.04812580970572184,
+        "Property_Area_Semiurban": 0.03320511825177866,
+        "CoapplicantIncome": 0.02735073061735949,
+        "EMI": 0.02336811781575868,
+        "Loan_Amount_Term": 0.022772588569831536,
+        "Married_No": 0.008488208649983765,
+        "Property_Area_Rural": 0.007789354844426778,
+        "Self_Employed_Yes": 0.005766154270076397,
+        "Education_Not Graduate": 0.00556619566139566,
+        "Dependents_3+": 0.005078051609682251,
+        "Gender_Female": 0.004776846745454856,
+        "Married_Yes": 0.0032249982515361103,
+        "Property_Area_Urban": 0.0026453328430745514,
+        "Gender_Male": 0.0020632966423673846,
+        "Education_Graduate": 0.0017018617441109545,
+        "Dependents_0": 0.0014253768777132776,
+        "Dependents_1": 0.0007907032475691149,
+        "Dependents_2": 0.0,
+        "Self_Employed_No": 0.0
     },
     "comparison_results": {
         "Logistic Regression": {
-            "Accuracy": 0.8617886178861789,
-            "Precision": 0.84,
+            "Accuracy": 0.8780487804878049,
+            "Precision": 0.8571428571428571,
             "Recall": 0.9882352941176471,
-            "F1_Score": 0.9081081081081082
+            "F1_Score": 0.9180327868852459
         },
         "Decision Tree": {
-            "Accuracy": 0.7398373983739838,
-            "Precision": 0.8192771084337349,
-            "Recall": 0.8,
-            "F1_Score": 0.8095238095238095
+            "Accuracy": 0.6910569105691057,
+            "Precision": 0.821917808219178,
+            "Recall": 0.7058823529411765,
+            "F1_Score": 0.759493670886076
         },
         "Random Forest": {
-            "Accuracy": 0.8130081300813008,
-            "Precision": 0.8369565217391305,
-            "Recall": 0.9058823529411765,
-            "F1_Score": 0.8700564971751412
+            "Accuracy": 0.8861788617886179,
+            "Precision": 0.8901098901098901,
+            "Recall": 0.9529411764705882,
+            "F1_Score": 0.9204545454545454
         },
         "XGBoost": {
-            "Accuracy": 0.8130081300813008,
-            "Precision": 0.8522727272727273,
+            "Accuracy": 0.8048780487804879,
+            "Precision": 0.8426966292134831,
             "Recall": 0.8823529411764706,
-            "F1_Score": 0.8670520231213873
+            "F1_Score": 0.8620689655172413
         }
     },
     "defaults": {
@@ -66,6 +70,10 @@
         "LoanAmount": 128.0,
         "Loan_Amount_Term": 360.0,
         "Credit_History": "1.0",
-        "Property_Area": "Semiurban"
+        "Property_Area": "Semiurban",
+        "Total_Income": 5416.5,
+        "Income_to_Loan_Ratio": 41.42653683719662,
+        "EMI": 779.4156826985841,
+        "DTI": 14.81704292135558
     }
 }
