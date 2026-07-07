@@ -1,6 +1,6 @@
 # Loan Approval Prediction Streamlit Web Application
 
-🚀 **Live Demo:** [https://loan-approval-prediction.onrender.com](https://loan-approval-prediction.onrender.com)
+🚀 **Live Demo:** [https://loan-approval-prediction-lfoh.onrender.com](https://loan-approval-prediction-lfoh.onrender.com)
 
 This repository contains an enhanced, production-ready Machine Learning project that predicts loan eligibility using customer application profiles. It features advanced **domain feature engineering**, an optimized **Random Forest classifier** pipeline, an interactive **What-If Loan Optimizer simulator**, and a bulk **Batch Prediction Explorer** for bulk processing and CSV export.
 
