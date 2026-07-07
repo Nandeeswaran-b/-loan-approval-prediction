@@ -74,8 +74,8 @@ def train_and_save_model():
     if "Loan_ID" in df.columns:
         df = df.drop(columns=["Loan_ID"])
         
-    # Treat Credit_History as object type (categorical indicator)
-    df['Credit_History'] = df['Credit_History'].astype(object)
+    # Treat Credit_History as string category object (categorical indicator)
+    df['Credit_History'] = df['Credit_History'].apply(lambda x: str(float(x)) if pd.notna(x) else np.nan)
     
     # Apply feature engineering
     df = add_engineered_features(df)
