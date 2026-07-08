@@ -48,7 +48,7 @@ def get_loan_recommendations(model, input_df):
         if pred == 1:
             recommendations.append({
                 "type": "Reduce Loan Amount",
-                "message": f"Apply for a lower loan amount of **${new_amt:,}k** (instead of ${current_amt:.0f}k).",
+                "message": f"Apply for a lower loan amount of **₹{new_amt:,}k** (instead of ₹{current_amt:.0f}k).",
                 "confidence": prob * 100
             })
             break
@@ -65,7 +65,7 @@ def get_loan_recommendations(model, input_df):
         if pred == 1:
             recommendations.append({
                 "type": "Increase Income",
-                "message": f"Increase combined income by **${round(add_inc):,}** (e.g., via co-applicant or salary raise).",
+                "message": f"Increase combined income by **₹{round(add_inc):,}** (e.g., via co-applicant or salary raise).",
                 "confidence": prob * 100
             })
             break
@@ -133,9 +133,9 @@ def get_local_contributions(model, input_df, defaults):
         if feat == "Credit_History":
             user_val = "Good" if str(user_val) in ["1.0", "1"] else "Poor"
         elif feat in ["ApplicantIncome", "CoapplicantIncome"]:
-            user_val = f"${user_val:,.0f}"
+            user_val = f"₹{user_val:,.0f}"
         elif feat == "LoanAmount":
-            user_val = f"${user_val * 1000:,.0f}"
+            user_val = f"₹{user_val * 1000:,.0f}"
             
         label = f"{feat} ({user_val})"
         if abs(contrib) > 0.005: # Keep contributions > 0.5%
@@ -197,14 +197,14 @@ with tab_predict:
             c3, c4 = st.columns(2)
             with c3:
                 self_employed = st.selectbox("Self Employed", ["Yes", "No"], help="Is the applicant self-employed?")
-                applicant_income = st.number_input("Applicant Monthly Income ($)", min_value=0, value=5000, step=100)
+                applicant_income = st.number_input("Applicant Monthly Income (₹)", min_value=0, value=5000, step=100)
             with c4:
-                coapplicant_income = st.number_input("Co-Applicant Monthly Income ($)", min_value=0, value=0, step=100, help="Income of spouse or partner.")
+                coapplicant_income = st.number_input("Co-Applicant Monthly Income (₹)", min_value=0, value=0, step=100, help="Income of spouse or partner.")
                 
             # Loan details
             c5, c6 = st.columns(2)
             with c5:
-                loan_amount = st.number_input("Loan Amount in Thousands ($)", min_value=1, value=150, step=5, help="e.g. 150 = $150,000")
+                loan_amount = st.number_input("Loan Amount in Thousands (₹)", min_value=1, value=150, step=5, help="e.g. 150 = ₹1,50,000")
             with c6:
                 term_options = [360, 480, 300, 240, 180, 120, 84, 60, 36, 12]
                 loan_term = st.selectbox("Loan Term (Months)", term_options, index=0)
@@ -293,7 +293,7 @@ with tab_predict:
                     st.markdown("#### 🔍 Financial Health & Risk Analysis")
                     col_r1, col_r2 = st.columns(2)
                     with col_r1:
-                        st.metric(label="Estimated Monthly Payment (EMI)", value=f"${emi:,.2f}")
+                        st.metric(label="Estimated Monthly Payment (EMI)", value=f"₹{emi:,.2f}")
                     with col_r2:
                         st.metric(label="Debt-to-Income Ratio (DTI)", value=f"{dti:.1f}%")
                         
@@ -336,18 +336,18 @@ Married: {married}
 Dependents: {dependents}
 Education: {education}
 Self Employed: {self_employed}
-Applicant Monthly Income: ${applicant_income:,.2f}
-Co-Applicant Monthly Income: ${coapplicant_income:,.2f}
-Total Combined Income: ${total_income:,.2f}
+Applicant Monthly Income: ₹{applicant_income:,.2f}
+Co-Applicant Monthly Income: ₹{coapplicant_income:,.2f}
+Total Combined Income: ₹{total_income:,.2f}
 
 --- LOAN APPLICATION DETAILS ---
-Requested Loan Amount: ${loan_amount_dollars:,.2f}
+Requested Loan Amount: ₹{loan_amount_dollars:,.2f}
 Loan Term: {loan_term} Months
 Credit History Status: {'Good (Cleared past debts)' if credit_history == 1.0 else 'Poor (Outstanding debts)'}
 Property Area: {property_area}
 
 --- RISK SUMMARY ---
-Estimated Monthly Payment (EMI): ${emi:,.2f} (Estimated at 6% APR)
+Estimated Monthly Payment (EMI): ₹{emi:,.2f} (Estimated at 6% APR)
 Debt-to-Income (DTI) Ratio: {dti:.2f}%
 Risk Designation: {'HIGH DEBT-TO-INCOME RISK' if dti > 40 else 'LOW/MODERATE DEBT RISK'}
 =================================================="""
