@@ -103,6 +103,48 @@ def get_loan_recommendations(model, input_df):
             
     return recommendations
 
+def get_local_contributions(model, input_df, defaults):
+    contributions = {}
+    import train_model
+    
+    # Baseline actual probability of approval
+    input_processed = train_model.add_engineered_features(input_df)
+    actual_prob = model.predict_proba(input_processed)[0][1]
+    
+    # We measure raw features
+    features_to_explain = [
+        "Credit_History", "LoanAmount", "ApplicantIncome", "Property_Area", 
+        "CoapplicantIncome", "Loan_Amount_Term", "Education", "Married"
+    ]
+    
+    for feat in features_to_explain:
+        counterfactual_df = input_df.copy()
+        default_val = defaults.get(feat)
+        if feat == "Credit_History":
+            default_val = "1.0"
+            
+        counterfactual_df[feat] = default_val
+        cf_processed = train_model.add_engineered_features(counterfactual_df)
+        cf_prob = model.predict_proba(cf_processed)[0][1]
+        
+        contrib = actual_prob - cf_prob
+        
+        user_val = input_df[feat].iloc[0]
+        if feat == "Credit_History":
+            user_val = "Good" if str(user_val) in ["1.0", "1"] else "Poor"
+        elif feat in ["ApplicantIncome", "CoapplicantIncome"]:
+            user_val = f"${user_val:,.0f}"
+        elif feat == "LoanAmount":
+            user_val = f"${user_val * 1000:,.0f}"
+            
+        label = f"{feat} ({user_val})"
+        if abs(contrib) > 0.005: # Keep contributions > 0.5%
+            contributions[label] = contrib
+            
+    sorted_contribs = dict(sorted(contributions.items(), key=lambda item: abs(item[1]), reverse=True))
+    return sorted_contribs
+
+
 # App Title & Layout
 st.title("🏦 Dream Housing Finance")
 st.write("Automated Loan Eligibility Prediction System")
@@ -261,7 +303,27 @@ with tab_predict:
                     else:
                         st.success(f"✅ **Acceptable Debt-to-Income Ratio:** The DTI of **{dti:.1f}%** is within standard lending bounds.")
                         
-                    # 3. Export Prediction Report
+                    # 3. Decision Factors (Explainability)
+                    st.markdown("#### 🔬 Decision Factors (Why?)")
+                    st.write("This chart shows how each application detail influenced the approval probability relative to standard baselines:")
+                    contribs = get_local_contributions(model, input_df, metadata["defaults"])
+                    if contribs:
+                        features = list(contribs.keys())
+                        impacts = [val * 100 for val in contribs.values()] # Convert to percentages
+                        
+                        # Plot horizontal bar chart
+                        fig_local, ax_local = plt.subplots(figsize=(6, 3.5))
+                        colors = ['#2e7d32' if x >= 0 else '#c62828' for x in impacts]
+                        sns.barplot(x=impacts, y=features, ax=ax_local, palette=colors)
+                        ax_local.axvline(0, color='black', linewidth=0.8, linestyle='--')
+                        ax_local.set_xlabel("Impact on Approval Probability (%)", fontsize=8)
+                        ax_local.tick_params(axis='both', labelsize=8)
+                        plt.tight_layout()
+                        st.pyplot(fig_local)
+                    else:
+                        st.info("All inputs align with baseline averages.")
+                        
+                    # 4. Export Prediction Report
                     report_text = f"""==================================================
 DREAM HOUSING FINANCE - LOAN APPLICATION REPORT
 ==================================================
